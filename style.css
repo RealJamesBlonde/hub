@@ -67,3 +67,10 @@ main { padding: 16px 16px calc(env(safe-area-inset-bottom) + 32px); max-width: 7
 .naglowek.rok:not(:first-child) { margin-top: 10px; border-top: 1px solid var(--linia); border-radius: 0; padding-top: 18px; }
 .naglowek.miesiac { font-size: 16px; font-weight: 600; padding: 10px 6px 8px 14px; }
 .grupa { padding-left: 14px; margin-bottom: 6px; }
+
+/* --- ekran klucza --- */
+.klucz { background: var(--karta); border-radius: 16px; padding: 20px; margin-top: 8px; }
+.klucz p { margin: 0 0 10px; }
+.klucz input { width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--linia); background: var(--tlo); color: var(--tekst); margin-top: 6px; }
+.blad { color: #d93025; font-size: 14px; }

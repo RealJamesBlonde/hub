@@ -1,4 +1,4 @@
-import { pobierzWpisy, oznaczPrzeczytane } from './dane.js';
+import { pobierzWpisy, oznaczPrzeczytane, ustawKlucz } from './dane.js';
 
 // Ikonki folderów – można tu dopisywać kolejne.
 const IKONY = { chemia: '🧪', angielski: '📘', notatki: '📝', biologia: '🧬', fizyka: '⚛️', historia: '📜', newsy: '📰', matematyka: '📐' };
@@ -24,10 +24,35 @@ const dataPL = iso => {
   return isNaN(d) ? '' : d.toLocaleString('pl-PL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
 };
 
-async function wczytaj() {
-  $('widok').innerHTML = '<p class="info">Ładowanie…</p>';
+async function wczytaj(cicho = false) {
+  if (!cicho) $('widok').innerHTML = '<p class="info">Ładowanie…</p>';
   try { wpisy = await pobierzWpisy(); rysuj(); }
-  catch (e) { $('widok').innerHTML = `<p class="info">Nie udało się wczytać wpisów.<br>${esc(e.message)}</p>`; }
+  catch (e) {
+    if (e.message === 'BRAK_KLUCZA' || e.message === 'ZLY_KLUCZ') return ekranKlucza(e.message === 'ZLY_KLUCZ');
+    if (!cicho) $('widok').innerHTML = `<p class="info">Nie udało się wczytać wpisów.<br>${esc(e.message)}</p>`;
+  }
+}
+
+// Ekran, na którym raz wpisujesz tajny klucz do skrzynki (zapamiętywany na tym urządzeniu).
+function ekranKlucza(zly) {
+  $('menu').hidden = true; $('wstecz').hidden = true;
+  $('tytul').textContent = 'Mój Hub';
+  $('widok').innerHTML = `
+    <form id="formKlucz" class="klucz">
+      <p><b>Połącz hub ze swoją skrzynką</b></p>
+      <p class="data">Wpisz swój tajny klucz. Wystarczy raz – to urządzenie go zapamięta.</p>
+      ${zly ? '<p class="blad">Ten klucz nie pasuje. Sprawdź, czy wkleiłeś go w całości.</p>' : ''}
+      <input id="poleKlucz" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="hub_…">
+      <button class="akcja" type="submit">Połącz</button>
+    </form>`;
+  $('formKlucz').onsubmit = ev => {
+    ev.preventDefault();
+    const k = $('poleKlucz').value.trim();
+    if (!k) return;
+    ustawKlucz(k);
+    $('menu').hidden = false;
+    wczytaj();
+  };
 }
 
 function idzDo(nowyStan, zastap = false) {
@@ -174,7 +199,9 @@ function rysuj() {
 $('menu').onclick = otworzMenu;
 $('zaslona').onclick = zamknijMenu;
 $('wstecz').onclick = () => history.back();
-$('odswiez').onclick = wczytaj;
+$('odswiez').onclick = () => wczytaj();
+// Po powrocie do aplikacji (np. odblokowanie telefonu) – po cichu pobierz nowe notatki.
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && stan.ekran === 'lista') wczytaj(true); });
 // Systemowy przycisk/gest "wstecz" zamyka menu albo wraca do listy.
 window.addEventListener('popstate', e => {
   const s = e.state || { ekran: 'lista', folder: null };

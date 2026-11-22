@@ -1,52 +1,45 @@
-// ===== ŹRÓDŁO DANYCH HUBA =====
-// Na razie wpisy są zapisywane w pamięci telefonu (localStorage) i są tu przykładowe treści.
-// W następnym kroku podmienimy tylko ten plik, żeby wpisy przychodziły od automatów z internetu.
-// Reszta aplikacji (app.js) nie będzie musiała się zmieniać.
+// ===== ŹRÓDŁO DANYCH HUBA: prywatna skrzynka w Arkuszu Google =====
+// Adres skrzynki jest tu jawny, ale bez tajnego klucza nic z niej nie odczytasz.
+// Klucz NIE jest w kodzie – hub pyta o niego raz i zapamiętuje go na danym urządzeniu.
 
-const KLUCZ_PAMIECI = 'hub-wpisy-v2';
+const ADRES = 'https://script.google.com/macros/s/AKfycbw0flZzbPKhArNT3YRoXY3QBtalC2kI4CqUSkz6TYiM7DVyFsInHmlcscWul6hfeYy2VA/exec';
+const KLUCZ_KLUCZA = 'hub-klucz';
+const KOPIA = 'hub-kopia-wpisow'; // ostatnio pobrane notatki – żeby hub działał też bez internetu
 
-// Przykładowe wpisy z różnych miesięcy i lat – żeby było widać grupowanie.
-const PRZYKLADY = [
-  { folder: 'notatki', data: 'teraz', tytul: 'Witaj w swoim hubie 👋',
-    tresc: 'Menu ☰ w lewym górnym rogu pokazuje foldery.\n\nW każdym folderze wpisy są same układane w lata i miesiące. Stuknij nagłówek, żeby go rozwinąć albo zwinąć.' },
-  { folder: 'angielski', data: '2026-11-22T07:00', tytul: '5 zwrotów na dziś',
-    tresc: '1. to be on the same page – mieć to samo zdanie\n2. to cut corners – iść na skróty\n3. a blessing in disguise – szczęście w nieszczęściu\n4. to get the hang of it – załapać, o co chodzi\n5. to call it a day – skończyć na dziś' },
-  { folder: 'angielski', data: '2026-11-20T07:00', tytul: 'Czas Present Perfect', przeczytane: true,
-    tresc: 'Przykładowa lekcja z listopada.' },
-  { folder: 'angielski', data: '2026-11-18T07:00', tytul: 'Phrasal verbs z „get”', przeczytane: true,
-    tresc: 'Przykładowa lekcja z listopada.' },
-  { folder: 'angielski', data: '2026-10-15T07:00', tytul: 'Idiomy o pogodzie',
-    tresc: 'Przykładowa lekcja z października.' },
-  { folder: 'angielski', data: '2026-10-03T07:00', tytul: 'Słówka: podróże', przeczytane: true,
-    tresc: 'Przykładowa lekcja z października.' },
-  { folder: 'angielski', data: '2025-12-10T07:00', tytul: 'Świąteczne słownictwo', przeczytane: true,
-    tresc: 'Przykładowa lekcja z grudnia 2025.' },
-  { folder: 'chemia', data: '2026-11-22T07:00', tytul: 'Wiązania kowalencyjne – 10 minut',
-    tresc: 'Tutaj automat od chemii będzie codziennie wrzucał tekst do przeczytania w około 10 minut.\n\nPytania:\n1. Czym różni się wiązanie kowalencyjne spolaryzowane od niespolaryzowanego?\n2. Podaj przykład cząsteczki z wiązaniem potrójnym.' },
-  { folder: 'chemia', data: '2026-10-28T07:00', tytul: 'Układ okresowy – grupy i okresy', przeczytane: true,
-    tresc: 'Przykładowa lekcja z października.' }
-];
-
-function zapisz_(wpisy) {
-  localStorage.setItem(KLUCZ_PAMIECI, JSON.stringify(wpisy));
-}
+export function maKlucz() { return !!localStorage.getItem(KLUCZ_KLUCZA); }
+export function ustawKlucz(k) { localStorage.setItem(KLUCZ_KLUCZA, k.trim()); }
+export function usunKlucz() { localStorage.removeItem(KLUCZ_KLUCZA); localStorage.removeItem(KOPIA); }
 
 export async function pobierzWpisy() {
-  let wpisy = JSON.parse(localStorage.getItem(KLUCZ_PAMIECI) || 'null');
-  if (!wpisy) {
-    wpisy = PRZYKLADY.map((p, i) => ({
-      ...p,
-      id: 'przyklad-' + i,
-      data: (p.data === 'teraz' ? new Date() : new Date(p.data)).toISOString(),
-      przeczytane: !!p.przeczytane
-    }));
-    zapisz_(wpisy);
+  const k = localStorage.getItem(KLUCZ_KLUCZA);
+  if (!k) throw new Error('BRAK_KLUCZA');
+  try {
+    const r = await fetch(`${ADRES}?k=${encodeURIComponent(k)}&t=${Date.now()}`);
+    const d = await r.json();
+    if (!d.ok) {
+      if (d.blad === 'zly klucz') { usunKlucz(); throw new Error('ZLY_KLUCZ'); }
+      throw new Error(d.blad || 'Błąd skrzynki');
+    }
+    const wpisy = d.wpisy.sort((a, b) => b.data.localeCompare(a.data));
+    localStorage.setItem(KOPIA, JSON.stringify(wpisy));
+    return wpisy;
+  } catch (e) {
+    if (e.message === 'ZLY_KLUCZ') throw e;
+    const kopia = JSON.parse(localStorage.getItem(KOPIA) || 'null');
+    if (kopia) return kopia; // brak internetu – pokaż ostatnio pobrane
+    throw new Error('Brak połączenia ze skrzynką.');
   }
-  return wpisy.sort((a, b) => b.data.localeCompare(a.data));
 }
 
 export async function oznaczPrzeczytane(id, wartosc) {
-  const wpisy = await pobierzWpisy();
-  const w = wpisy.find(x => x.id === id);
-  if (w) { w.przeczytane = wartosc; zapisz_(wpisy); }
+  // aktualizujemy też lokalną kopię, żeby zmiana była widoczna od razu
+  const kopia = JSON.parse(localStorage.getItem(KOPIA) || '[]');
+  const w = kopia.find(x => x.id === id);
+  if (w) { w.przeczytane = wartosc; localStorage.setItem(KOPIA, JSON.stringify(kopia)); }
+  // text/plain – żeby przeglądarka wysłała to bez dodatkowych pytań (CORS)
+  await fetch(ADRES, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ k: localStorage.getItem(KLUCZ_KLUCZA), akcja: 'oznacz', id, przeczytane: wartosc })
+  }).catch(() => {});
 }
