@@ -14,10 +14,18 @@
 </head>
 <body>
   <header>
+    <button id="menu" aria-label="Menu folderów">☰</button>
     <button id="wstecz" aria-label="Wstecz" hidden>‹</button>
-    <h1 id="tytul">Mój Hub</h1>
+    <h1 id="tytul">Najnowsze</h1>
     <button id="odswiez" aria-label="Odśwież">↻</button>
   </header>
+
+  <div id="zaslona"></div>
+  <nav id="szuflada" aria-label="Foldery">
+    <div class="szuflada-naglowek">Mój Hub</div>
+    <div id="lista-folderow"></div>
+  </nav>
+
   <main id="widok"></main>
   <script type="module" src="app.js"></script>
 </body>
