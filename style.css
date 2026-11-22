@@ -55,3 +55,15 @@ main { padding: 16px 16px calc(env(safe-area-inset-bottom) + 32px); max-width: 7
   background: var(--akcent); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
 .akcja.drugorzedna { background: var(--karta); color: var(--akcent); }
 .info { color: var(--szary); text-align: center; padding: 48px 16px; }
+
+/* --- nagłówki rok / miesiąc w folderze --- */
+.naglowek { display: flex; align-items: center; gap: 10px; width: 100%; border: 0; background: none; color: var(--tekst);
+  font: inherit; text-align: left; cursor: pointer; border-radius: 10px; }
+.naglowek:active { background: var(--linia); }
+.naglowek span:first-child { flex: 0 0 auto; }
+.naglowek small { flex: 1; color: var(--szary); font-size: 13px; font-weight: 400; }
+.naglowek .strzalka { color: var(--szary); font-size: 14px; width: 18px; text-align: center; }
+.naglowek.rok { font-size: 22px; font-weight: 700; padding: 14px 6px 8px; }
+.naglowek.rok:not(:first-child) { margin-top: 10px; border-top: 1px solid var(--linia); border-radius: 0; padding-top: 18px; }
+.naglowek.miesiac { font-size: 16px; font-weight: 600; padding: 10px 6px 8px 14px; }
+.grupa { padding-left: 14px; margin-bottom: 6px; }
