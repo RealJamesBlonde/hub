@@ -19,6 +19,17 @@ let rozwiniete = {};
 try { rozwiniete = JSON.parse(localStorage.getItem(KLUCZ_ROZW) || '{}'); } catch { rozwiniete = {}; }
 const zapiszRozw = () => { try { localStorage.setItem(KLUCZ_ROZW, JSON.stringify(rozwiniete)); } catch {} };
 
+// Treść lekcji: rysunki SVG pokazujemy jako obrazki (bezpiecznie, jako <img>), a nagłówki WIELKIMI LITERAMI – pogrubione.
+function formatujTresc(t) {
+  return String(t ?? '').split(/(<svg[\s\S]*?<\/svg>)/i).map(cz => {
+    if (/^<svg/i.test(cz)) {
+      const svg = /xmlns=/.test(cz) ? cz : cz.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
+      return `<img class="rysunek" alt="Rysunek do lekcji" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}">`;
+    }
+    return esc(cz).replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻ0-9 ,.:;!?()–-]{2,})\n?/gm, '<b class="sekcja-lekcji">$1</b>');
+  }).join('');
+}
+
 const dataPL = iso => {
   const d = new Date(iso);
   return isNaN(d) ? '' : d.toLocaleString('pl-PL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
@@ -184,7 +195,7 @@ function rysuj() {
     $('tytul').textContent = w.tytul || duza(w.folder);
     $('widok').innerHTML = `
       <p class="data">${IKONY[w.folder] || '📁'} ${esc(duza(w.folder))} · ${dataPL(w.data)}</p>
-      <article class="tresc">${esc(w.tresc)}</article>
+      <article class="tresc">${formatujTresc(w.tresc)}</article>
       <button class="akcja ${w.przeczytane ? 'drugorzedna' : ''}" id="oznacz">
         ${w.przeczytane ? 'Oznacz jako nieprzeczytane' : '✓ Przeczytane'}
       </button>`;

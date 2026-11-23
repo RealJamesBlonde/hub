@@ -74,3 +74,7 @@ main { padding: 16px 16px calc(env(safe-area-inset-bottom) + 32px); max-width: 7
 .klucz input { width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px;
   border: 1px solid var(--linia); background: var(--tlo); color: var(--tekst); margin-top: 6px; }
 .blad { color: #d93025; font-size: 14px; }
+
+/* --- rysunki i nagłówki w lekcjach --- */
+.rysunek { display: block; width: 100%; height: auto; margin: 8px 0 4px; border-radius: 12px; background: #fff; border: 1px solid var(--linia); }
+.sekcja-lekcji { display: block; margin-top: 14px; color: var(--akcent); font-size: 15px; letter-spacing: .03em; }
