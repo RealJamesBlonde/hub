@@ -43,3 +43,15 @@ export async function oznaczPrzeczytane(id, wartosc) {
     body: JSON.stringify({ k: localStorage.getItem(KLUCZ_KLUCZA), akcja: 'oznacz', id, przeczytane: wartosc })
   }).catch(() => {});
 }
+
+// Własna notatka z telefonu – trafia do tej samej skrzynki co lekcje od automatów.
+export async function dodajNotatke(folder, tytul, tresc) {
+  const r = await fetch(ADRES, {
+    method: 'POST',
+    headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+    body: JSON.stringify({ k: localStorage.getItem(KLUCZ_KLUCZA), folder, tytul, tresc })
+  });
+  const d = await r.json();
+  if (!d.ok) throw new Error(d.blad === 'zly klucz' ? 'Zły klucz – zaloguj się ponownie.' : (d.blad || 'Błąd skrzynki'));
+  return d.id;
+}

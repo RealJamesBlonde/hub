@@ -78,3 +78,18 @@ main { padding: 16px 16px calc(env(safe-area-inset-bottom) + 32px); max-width: 7
 /* --- rysunki i nagłówki w lekcjach --- */
 .rysunek { display: block; width: 100%; height: auto; margin: 8px 0 4px; border-radius: 12px; background: #fff; border: 1px solid var(--linia); }
 .sekcja-lekcji { display: block; margin-top: 14px; color: var(--akcent); font-size: 15px; letter-spacing: .03em; }
+
+/* --- przycisk "+" (nowa notatka) --- */
+.fab { position: fixed; right: 18px; bottom: calc(env(safe-area-inset-bottom) + 20px); z-index: 6;
+  width: 58px; height: 58px; border-radius: 18px; border: 0; background: var(--akcent); color: #fff;
+  font-size: 32px; line-height: 1; cursor: pointer; box-shadow: 0 4px 14px rgba(0,0,0,.25); }
+.fab:active { transform: scale(.96); }
+main { padding-bottom: calc(env(safe-area-inset-bottom) + 96px); }
+
+/* --- pola formularzy i wyszukiwarki --- */
+.pole { display: block; width: 100%; font: inherit; font-size: 16px; padding: 12px 14px; border-radius: 12px;
+  border: 1px solid var(--linia); background: var(--karta); color: var(--tekst); margin-bottom: 12px; }
+textarea.pole { resize: vertical; line-height: 1.5; min-height: 180px; }
+.formularz label { display: block; font-size: 13px; color: var(--szary); margin: 4px 2px 6px; }
+.fragment { display: block; margin-top: 6px; font-size: 14px; color: var(--szary); line-height: 1.4; }
+#szukaj { color: var(--akcent); display: grid; place-items: center; }

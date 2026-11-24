@@ -1,4 +1,4 @@
-import { pobierzWpisy, oznaczPrzeczytane, ustawKlucz } from './dane.js';
+import { pobierzWpisy, oznaczPrzeczytane, ustawKlucz, dodajNotatke } from './dane.js';
 
 // Ikonki folderów – można tu dopisywać kolejne.
 const IKONY = { chemia: '🧪', angielski: '📘', notatki: '📝', biologia: '🧬', fizyka: '⚛️', historia: '📜', newsy: '📰', matematyka: '📐' };
@@ -30,6 +30,10 @@ function formatujTresc(t) {
   }).join('');
 }
 
+// Do wyszukiwania: bez rysunków, małe litery, bez polskich znaków (żeby "mitoza" = "MITOZA", "zolw" = "żółw").
+const bezSvg = t => String(t ?? '').replace(/<svg[\s\S]*?<\/svg>/gi, ' ');
+const norm = t => t.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/ł/g, 'l');
+
 const dataPL = iso => {
   const d = new Date(iso);
   return isNaN(d) ? '' : d.toLocaleString('pl-PL', { day: 'numeric', month: 'long', hour: '2-digit', minute: '2-digit' });
@@ -46,7 +50,7 @@ async function wczytaj(cicho = false) {
 
 // Ekran, na którym raz wpisujesz tajny klucz do skrzynki (zapamiętywany na tym urządzeniu).
 function ekranKlucza(zly) {
-  $('menu').hidden = true; $('wstecz').hidden = true;
+  $('menu').hidden = true; $('wstecz').hidden = true; $('szukaj').hidden = true; $('dodaj').hidden = true;
   $('tytul').textContent = 'Mój Hub';
   $('widok').innerHTML = `
     <form id="formKlucz" class="klucz">
@@ -61,7 +65,7 @@ function ekranKlucza(zly) {
     const k = $('poleKlucz').value.trim();
     if (!k) return;
     ustawKlucz(k);
-    $('menu').hidden = false;
+    $('menu').hidden = false; $('szukaj').hidden = false; $('dodaj').hidden = false;
     wczytaj();
   };
 }
@@ -115,8 +119,15 @@ function zamknijMenu() {
 function rysuj() {
   document.body.classList.toggle('menu-otwarte', !!history.state?.menu);
   const czytanie = stan.ekran === 'czytaj';
-  $('menu').hidden = czytanie;
-  $('wstecz').hidden = !czytanie;
+  const podstrona = stan.ekran !== 'lista'; // czytanie, szukanie, nowa notatka
+  $('menu').hidden = podstrona;
+  $('wstecz').hidden = !podstrona;
+  $('szukaj').hidden = podstrona;
+  $('odswiez').hidden = podstrona;
+  $('dodaj').hidden = podstrona;
+
+  if (stan.ekran === 'szukaj') return rysujSzukanie();
+  if (stan.ekran === 'nowa') return rysujNowa();
 
   if (stan.ekran === 'lista') {
     $('tytul').textContent = stan.folder ? duza(stan.folder) : 'Najnowsze';
@@ -207,6 +218,90 @@ function rysuj() {
   }
 }
 
+// ---------- WYSZUKIWARKA ----------
+function rysujSzukanie() {
+  $('tytul').textContent = 'Szukaj';
+  if (!$('poleSzukaj')) {
+    $('widok').innerHTML = `
+      <input id="poleSzukaj" class="pole" type="search" placeholder="Np. mitoza, kwasy, atom…" autocomplete="off">
+      <div id="wyniki"></div>`;
+    $('poleSzukaj').value = stan.q || '';
+    $('poleSzukaj').oninput = () => { stan.q = $('poleSzukaj').value; history.replaceState({ ...stan }, ''); pokazWyniki(); };
+    setTimeout(() => $('poleSzukaj').focus(), 50);
+  }
+  pokazWyniki();
+}
+
+function pokazWyniki() {
+  const q = norm((stan.q || '').trim());
+  if (q.length < 2) { $('wyniki').innerHTML = '<p class="info">Wpisz co najmniej 2 litery.</p>'; return; }
+  const slowa = q.split(/\s+/);
+  const trafienia = wpisy
+    .map(w => {
+      const tytulN = norm(w.tytul || ''), trescCzysta = bezSvg(w.tresc), trescN = norm(trescCzysta);
+      if (!slowa.every(sl => tytulN.includes(sl) || trescN.includes(sl))) return null;
+      const wynik = slowa.reduce((s, sl) => s + (tytulN.includes(sl) ? 10 : 0), 0);
+      // fragment tekstu wokół pierwszego trafienia
+      const i = trescN.indexOf(slowa[0]);
+      const fragment = i < 0 ? '' : (i > 50 ? '…' : '') + trescCzysta.slice(Math.max(0, i - 50), i + 90).replace(/\s+/g, ' ') + '…';
+      return { w, wynik, fragment };
+    })
+    .filter(Boolean)
+    .sort((a, b) => b.wynik - a.wynik || b.w.data.localeCompare(a.w.data));
+  $('wyniki').innerHTML = trafienia.length
+    ? `<p class="data">Znaleziono: ${trafienia.length}</p>` + trafienia.map(({ w, fragment }) => `
+      <button class="wpis ${w.przeczytane ? '' : 'nowy'}" data-id="${esc(w.id)}">
+        <b>${esc(w.tytul || '(bez tytułu)')}</b>
+        <small>${IKONY[w.folder] || '📁'} ${esc(duza(w.folder))} · ${dataPL(w.data)}</small>
+        ${fragment ? `<span class="fragment">${esc(fragment)}</span>` : ''}
+      </button>`).join('')
+    : '<p class="info">Nic nie znaleziono.</p>';
+  document.querySelectorAll('#wyniki .wpis').forEach(b => b.onclick = () => idzDo({ ekran: 'czytaj', folder: null, id: b.dataset.id }));
+}
+
+// ---------- NOWA WŁASNA NOTATKA ----------
+function rysujNowa() {
+  $('tytul').textContent = 'Nowa notatka';
+  const foldery = [...new Set(wpisy.map(w => w.folder))].sort((a, b) => a.localeCompare(b, 'pl'));
+  const domyslny = stan.folder || 'notatki';
+  if (!foldery.includes(domyslny)) foldery.unshift(domyslny);
+  $('widok').innerHTML = `
+    <form id="formNowa" class="formularz">
+      <label>Folder</label>
+      <select id="nFolder" class="pole">
+        ${foldery.map(f => `<option value="${esc(f)}" ${f === domyslny ? 'selected' : ''}>${IKONY[f] || '📁'} ${esc(duza(f))}</option>`).join('')}
+        <option value="__nowy">➕ Nowy folder…</option>
+      </select>
+      <input id="nNowyFolder" class="pole" placeholder="Nazwa nowego folderu" hidden>
+      <label>Tytuł</label>
+      <input id="nTytul" class="pole" placeholder="O czym jest ta notatka?">
+      <label>Treść</label>
+      <textarea id="nTresc" class="pole" rows="10" placeholder="Pisz…"></textarea>
+      <p id="nBlad" class="blad" hidden></p>
+      <button class="akcja" type="submit" id="nZapisz">Zapisz notatkę</button>
+    </form>`;
+  $('nFolder').onchange = () => { $('nNowyFolder').hidden = $('nFolder').value !== '__nowy'; if (!$('nNowyFolder').hidden) $('nNowyFolder').focus(); };
+  $('formNowa').onsubmit = async ev => {
+    ev.preventDefault();
+    const folder = ($('nFolder').value === '__nowy' ? $('nNowyFolder').value : $('nFolder').value).trim().toLowerCase();
+    const tytul = $('nTytul').value.trim(), tresc = $('nTresc').value.trim();
+    const blad = m => { $('nBlad').textContent = m; $('nBlad').hidden = false; };
+    if (!folder) return blad('Podaj nazwę folderu.');
+    if (!tresc && !tytul) return blad('Notatka jest pusta.');
+    $('nZapisz').disabled = true; $('nZapisz').textContent = 'Zapisywanie…'; $('nBlad').hidden = true;
+    try {
+      await dodajNotatke(folder, tytul || tresc.split('\n')[0].slice(0, 60), tresc || tytul);
+      wpisy = await pobierzWpisy();
+      history.back(); // wróć do listy, z której przyszedłeś
+    } catch (e) {
+      blad('Nie udało się zapisać: ' + e.message + ' Sprawdź internet i spróbuj jeszcze raz.');
+      $('nZapisz').disabled = false; $('nZapisz').textContent = 'Zapisz notatkę';
+    }
+  };
+}
+
+$('szukaj').onclick = () => idzDo({ ekran: 'szukaj', folder: stan.folder, q: '' });
+$('dodaj').onclick = () => idzDo({ ekran: 'nowa', folder: stan.folder });
 $('menu').onclick = otworzMenu;
 $('zaslona').onclick = zamknijMenu;
 $('wstecz').onclick = () => history.back();
@@ -216,7 +311,7 @@ document.addEventListener('visibilitychange', () => { if (document.visibilitySta
 // Systemowy przycisk/gest "wstecz" zamyka menu albo wraca do listy.
 window.addEventListener('popstate', e => {
   const s = e.state || { ekran: 'lista', folder: null };
-  stan = { ekran: s.ekran, folder: s.folder ?? null, id: s.id };
+  stan = { ekran: s.ekran, folder: s.folder ?? null, id: s.id, q: s.q };
   rysuj();
   if (!s.menu) window.scrollTo(0, s.scroll || 0);
 });
