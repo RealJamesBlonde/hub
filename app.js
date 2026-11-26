@@ -1,7 +1,7 @@
 import { pobierzWpisy, oznaczPrzeczytane, ustawKlucz, dodajNotatke } from './dane.js';
 
 // Ikonki folderów – można tu dopisywać kolejne.
-const IKONY = { chemia: '🧪', angielski: '📘', notatki: '📝', biologia: '🧬', fizyka: '⚛️', historia: '📜', newsy: '📰', matematyka: '📐' };
+const IKONY = { chemia: '🧪', angielski: '📘', notatki: '📝', praca: '💼', biologia: '🧬', fizyka: '⚛️', historia: '📜', newsy: '📰', matematyka: '📐' };
 
 let wpisy = [];
 // ekran: 'lista' (folder === null oznacza "Najnowsze" ze wszystkich folderów) albo 'czytaj'
@@ -26,7 +26,10 @@ function formatujTresc(t) {
       const svg = /xmlns=/.test(cz) ? cz : cz.replace(/<svg/i, '<svg xmlns="http://www.w3.org/2000/svg"');
       return `<img class="rysunek" alt="Rysunek do lekcji" src="data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}">`;
     }
-    return esc(cz).replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻ0-9 ,.:;!?()–-]{2,})\n?/gm, '<b class="sekcja-lekcji">$1</b>');
+    return esc(cz)
+      .replace(/^([A-ZĄĆĘŁŃÓŚŹŻ][A-ZĄĆĘŁŃÓŚŹŻ0-9 ,.:;!?()–-]{2,})\n?/gm, '<b class="sekcja-lekcji">$1</b>')
+      // linki (np. do ofert pracy) – klikalne, otwierają się w nowej karcie
+      .replace(/https?:\/\/[^\s<]+/g, u => `<a href="${u}" target="_blank" rel="noopener">${/linkedin\.com\/jobs/.test(u) ? '👉 Zobacz ofertę na LinkedIn' : u}</a>`);
   }).join('');
 }
 

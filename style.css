@@ -93,3 +93,5 @@ textarea.pole { resize: vertical; line-height: 1.5; min-height: 180px; }
 .formularz label { display: block; font-size: 13px; color: var(--szary); margin: 4px 2px 6px; }
 .fragment { display: block; margin-top: 6px; font-size: 14px; color: var(--szary); line-height: 1.4; }
 #szukaj { color: var(--akcent); display: grid; place-items: center; }
+
+.tresc a { color: var(--akcent); font-weight: 600; text-decoration: none; }
